@@ -1,5 +1,6 @@
 package dsteindo.palworld.savecleaner;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -11,11 +12,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class App {
     public static void main(String[] args) throws Exception {
-        String steamId = "";
-        String worldId = "1AB5E022419B663B446DA28C105FB01D";
+        String basePath = System.getenv("APPDATA") + "/../Local/Pal/Saved/SaveGames";
+        String steamId = getSteamId(args, basePath);
+        String worldId = getWorldId(args, basePath + '/' + steamId);
+
         ObjectMapper mapper = new ObjectMapper();
-        String appDataPath = System.getenv("APPDATA");
-        Path inputPath = Paths.get(appDataPath + "/../Local/Pal/Saved/SaveGames", steamId, worldId, "Level.sav.json");
+        Path inputPath = Paths.get(basePath, steamId, worldId, "Level.sav.json");
         JsonNode obj = mapper.readValue(inputPath.toFile(), JsonNode.class);
 
         JsonNode worldData = obj.get("properties").get("worldSaveData").get("value");
@@ -24,11 +26,11 @@ public class App {
 
         removeAssignedPals(worldData, palInstanceIds);
 
-        deleteUnassignedParameters(worldData, palInstanceIds);
+        palInstanceIds = deleteUnassignedParameters(worldData, palInstanceIds);
 
         deleteUnassignedGroupSaveData(worldData, palInstanceIds);
 
-        Path outputPath = Paths.get(appDataPath + "/../Local/Pal/Saved/SaveGames", steamId, worldId, "Level.sav.modified.json");
+        Path outputPath = Paths.get(basePath, steamId, worldId, "Level.sav.modified.json");
         mapper.writeValue(outputPath.toFile(), obj);
     }
 
@@ -50,27 +52,31 @@ public class App {
             JsonNode slots = container.get("value").get("Slots").get("value");
             for (JsonNode slot : slots.get("values")) {
                 String instanceId = slot.get("RawData").get("value").get("instance_id").asText();
-                if (palInstanceIds.contains(instanceId)) {
-                    palInstanceIds.remove(instanceId);
-                }
+                palInstanceIds.remove(instanceId);
             }
         }
         System.out.println("Pal instances unassigned: " + palInstanceIds.size());
     }
 
-    private static void deleteUnassignedParameters(JsonNode worldData, List<String> unassigned) {
-        int deleteCount = 0;
+    private static List<String> deleteUnassignedParameters(JsonNode worldData, List<String> unassigned) {
+        List<String> pals = new ArrayList<>();
         Iterator<JsonNode> iterator = worldData.get("CharacterSaveParameterMap").get("value").iterator();
         while (iterator.hasNext()) {
             JsonNode parameter = iterator.next();
             String instanceId = parameter.get("key").get("InstanceId").get("value").asText();
-            if (unassigned.contains(instanceId)) {
+            if (unassigned.contains(instanceId) && !isPlayer(parameter)) {
                 System.out.println(instanceId);
-                deleteCount++;
                 iterator.remove();
+                pals.add(instanceId);
             }
         }
-        System.out.println("Pal parameters removed: " + deleteCount);
+        System.out.println("Pal parameters removed: " + pals.size());
+        return pals;
+    }
+
+    private static boolean isPlayer(JsonNode parameter) {
+        JsonNode objectRef = parameter.get("value").get("RawData").get("value").get("object");
+        return objectRef.get("SaveParameter").get("value").has("IsPlayer");
     }
 
     private static void deleteUnassignedGroupSaveData(JsonNode worldData, List<String> unassigned) {
@@ -81,14 +87,43 @@ public class App {
             while (iterator.hasNext()) {
                 JsonNode handle = iterator.next();
                 String instanceId = handle.get("instance_id").asText();
-                if (unassigned.contains(instanceId))
-                {
-                    System.out.println(instanceId);
+                if (unassigned.contains(instanceId)) {
+                    // System.out.println(instanceId);
                     deleteCount++;
                     iterator.remove();
                 }
             }
         }
         System.out.println("Pal group save data removed: " + deleteCount);
+    }
+
+    private static String getSteamId(String[] args, String basePath) {
+        if (args.length > 0 && !args[0].isEmpty()) {
+            return args[0];
+        }
+        File[] files = Paths.get(basePath).toFile().listFiles();
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            if (file.isDirectory()) {
+                System.out.println("Fallback to steam id: " + file.getName());
+                return file.getName();
+            }
+        }
+        throw new IllegalStateException("No steam id provided/resolved");
+    }
+
+    private static String getWorldId(String[] args, String saveFolderPath) {
+        if (args.length > 1 && !args[1].isEmpty()) {
+            return args[1];
+        }
+        File[] files = Paths.get(saveFolderPath).toFile().listFiles();
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            if (file.isDirectory()) {
+                System.out.println("Fallback to world id: " + file.getName());
+                return file.getName();
+            }
+        }
+        throw new IllegalStateException("No world id provided/resolved");
     }
 }
