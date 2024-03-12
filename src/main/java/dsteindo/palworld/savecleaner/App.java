@@ -9,6 +9,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class App {
     public static void main(String[] args) throws Exception {
@@ -29,6 +30,8 @@ public class App {
         palInstanceIds = deleteUnassignedParameters(worldData, palInstanceIds);
 
         deleteUnassignedGroupSaveData(worldData, palInstanceIds);
+
+        resetRespawnTimers(worldData);
 
         Path outputPath = Paths.get(basePath, steamId, worldId, "Level.sav.modified.json");
         mapper.writeValue(outputPath.toFile(), obj);
@@ -56,6 +59,7 @@ public class App {
             }
         }
         System.out.println("Pal instances unassigned: " + palInstanceIds.size());
+        // palInstanceIds.forEach(instanceId -> System.out.println(instanceId));
     }
 
     private static List<String> deleteUnassignedParameters(JsonNode worldData, List<String> unassigned) {
@@ -125,5 +129,25 @@ public class App {
             }
         }
         throw new IllegalStateException("No world id provided/resolved");
+    }
+
+    private static void resetRespawnTimers(JsonNode worldData) {
+        JsonNode entries = worldData.get("MapObjectSpawnerInStageSaveData").get("value");
+        int count = 0;
+        for (JsonNode entry : entries) {
+            JsonNode instances = entry.get("value").get("SpawnerDataMapByLevelObjectInstanceId").get("value");
+            for (JsonNode instance : instances) {
+                JsonNode items = instance.get("value").get("ItemMap").get("value");
+                for (JsonNode item : items) {
+                    JsonNode lotteryTime = item.get("value").get("NextLotteryGameTime");
+                    long time = lotteryTime.get("value").asLong();
+                    if (time > 0) {
+                        count++;
+                        ((ObjectNode)lotteryTime).put("value", 0);
+                    }
+                }
+            }
+        }
+        System.out.println("Reset timer of objects: " + count);
     }
 }

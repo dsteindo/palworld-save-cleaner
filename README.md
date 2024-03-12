@@ -27,6 +27,7 @@ Background for these unassigned references is selling/condensing pals and the ga
 - Initial commit
 - Provide CLI args for steamId and worldId, added fallback to first folder in %appdata%\..\Local\Pal\Saved\SaveGames
 - Fixed issue where player was removed as well
+- Added functionality to respawn all objects (e.g ore/coal nodes and skill fruit tree fruits), because moving in game day in the past blocked respawning of resources
 
 ## Notes
 
