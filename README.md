@@ -1,7 +1,7 @@
 # palworld-save-cleaner
 
 This is a small project where I want to play around and clean pal references in save files that are unassigned.<br>
-Background for these unassigned references is selling/contensing pals and the game not picking up the changes correctly.
+Background for these unassigned references is selling/condensing pals and the game not picking up the changes correctly.
 
 ## Requirements
 
@@ -27,3 +27,28 @@ Background for these unassigned references is selling/contensing pals and the ga
 - Initial commit
 - Provide CLI args for steamId and worldId, added fallback to first folder in %appdata%\..\Local\Pal\Saved\SaveGames
 - Fixed issue where player was removed as well
+
+## Notes
+
+- The In Game Day seems to be calculated based on the "GameTimeSaveData" in Level.sav (as json)
+- Example of In Game Day "187"
+```
+"GameTimeSaveData": {
+    "struct_type": "PalGameTimeSaveData",
+    "struct_id": "00000000-0000-0000-0000-000000000000",
+    "id": null,
+    "value": {
+        "GameDateTimeTicks": {
+            "id": null,
+            "value": 161669830000000,
+            "type": "Int64Property"
+        },
+        "RealDateTimeTicks": {
+            "id": null,
+            "value": 3600017340000,
+            "type": "Int64Property"
+        }
+    },
+    "type": "StructProperty"
+},
+```
