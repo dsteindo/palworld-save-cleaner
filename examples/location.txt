@@ -1,0 +1,3 @@
+%appdata%\..\Local\Pal\Saved\SaveGames\STEAM_ID
+
+Replace STEAM_ID with your own

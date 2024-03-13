@@ -4,22 +4,42 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class App {
     public static void main(String[] args) throws Exception {
-        String basePath = System.getenv("APPDATA") + "/../Local/Pal/Saved/SaveGames";
+        String basePath = System.getenv("APPDATA") + "\\..\\Local\\Pal\\Saved\\SaveGames";
         String steamId = getSteamId(args, basePath);
-        String worldId = getWorldId(args, basePath + '/' + steamId);
+        List<String> worldIds = getWorldIds(args, basePath + '\\' + steamId);
 
+        for (String worldId : worldIds) {
+            Path worlPath = Paths.get(basePath, steamId, worldId);
+            handleInternal(worlPath);
+        }
+    }
+
+    private static void handleInternal(Path worldPath) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
-        Path inputPath = Paths.get(basePath, steamId, worldId, "Level.sav.json");
-        JsonNode obj = mapper.readValue(inputPath.toFile(), JsonNode.class);
+        String fileName = "Level.sav.json";
+        File inputFile = worldPath.resolve(fileName).toFile();
+
+        if (!inputFile.exists()) {
+            Path worldId = worldPath.getFileName();
+            System.out.println("Input file \"" + fileName + "\" does not exist in world " + worldId + ", skipping ...");
+            return;
+        }
+
+        JsonNode obj = mapper.readValue(inputFile, JsonNode.class);
 
         JsonNode worldData = obj.get("properties").get("worldSaveData").get("value");
 
@@ -33,7 +53,10 @@ public class App {
 
         resetRespawnTimers(worldData);
 
-        Path outputPath = Paths.get(basePath, steamId, worldId, "Level.sav.modified.json");
+        exportPalParameters(worldPath, worldData);
+        importPalParameters(worldPath, worldData);
+
+        Path outputPath = worldPath.resolve("Level.sav.modified.json");
         mapper.writeValue(outputPath.toFile(), obj);
     }
 
@@ -102,7 +125,8 @@ public class App {
     }
 
     private static String getSteamId(String[] args, String basePath) {
-        if (args.length > 0 && !args[0].isEmpty()) {
+        System.out.println("Steam base path used: " + basePath);
+        if (args.length > 0 && !args[0].isBlank()) {
             return args[0];
         }
         File[] files = Paths.get(basePath).toFile().listFiles();
@@ -113,22 +137,21 @@ public class App {
                 return file.getName();
             }
         }
-        throw new IllegalStateException("No steam id provided/resolved");
+        throw new IllegalStateException("No steam id resolved");
     }
 
-    private static String getWorldId(String[] args, String saveFolderPath) {
-        if (args.length > 1 && !args[1].isEmpty()) {
-            return args[1];
+    private static List<String> getWorldIds(String[] args, String saveFolderPath) {
+        if (args.length > 1 && !args[1].isBlank()) {
+            String fileName = args[1];
+            return Collections.singletonList(fileName);
         }
-        File[] files = Paths.get(saveFolderPath).toFile().listFiles();
-        for (int i = 0; i < files.length; i++) {
-            File file = files[i];
-            if (file.isDirectory()) {
-                System.out.println("Fallback to world id: " + file.getName());
-                return file.getName();
-            }
+        File[] files = Paths.get(saveFolderPath).toFile().listFiles(pathname -> pathname.isDirectory());
+        if (files.length > 0) {
+            List<String> result = Arrays.stream(files).map(file -> file.getName()).toList();
+            // System.out.println("Fallback to world ids: " + result);
+            return result;
         }
-        throw new IllegalStateException("No world id provided/resolved");
+        throw new IllegalStateException("No world id resolved");
     }
 
     private static void resetRespawnTimers(JsonNode worldData) {
@@ -143,11 +166,47 @@ public class App {
                     long time = lotteryTime.get("value").asLong();
                     if (time > 0) {
                         count++;
-                        ((ObjectNode)lotteryTime).put("value", 0);
+                        ((ObjectNode) lotteryTime).put("value", 0);
                     }
                 }
             }
         }
         System.out.println("Reset timer of objects: " + count);
+    }
+
+    private static void exportPalParameters(Path worldPath, JsonNode worldData) throws Exception {
+        File exportFile = worldPath.resolve("pal-parameters-export.json").toFile();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(exportFile, worldData.get("CharacterSaveParameterMap"));
+    }
+
+    private static void importPalParameters(Path worldPath, JsonNode worldData) throws Exception {
+        File importFile = worldPath.resolve("pal-parameters-import.json").toFile();
+        if (!importFile.exists()) {
+            return;
+        }
+        Map<String, JsonNode> importInstances = getImportPalParameters(importFile);
+        JsonNode valueArray = worldData.get("CharacterSaveParameterMap").get("value");
+        for (int index = 0; index < valueArray.size(); index++) {
+            JsonNode parameter = valueArray.get(index);
+            String instanceId = parameter.get("key").get("InstanceId").get("value").asText();
+            JsonNode other = importInstances.get(instanceId);
+            if (other != null && !other.equals(parameter) && !isPlayer(parameter)) {
+                System.out.println("Pal parameter " + instanceId + " is different from import, overriding value ...");
+                ((ArrayNode) valueArray).remove(index);
+                ((ArrayNode) valueArray).insert(index, other);
+            }
+        }
+    }
+
+    private static Map<String, JsonNode> getImportPalParameters(File importFile) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode importNode = mapper.readValue(importFile, JsonNode.class);
+        Map<String, JsonNode> result = new HashMap<>();
+        for (JsonNode parameter : importNode.get("value")) {
+            String instanceId = parameter.get("key").get("InstanceId").get("value").asText();
+            result.put(instanceId, parameter);
+        }
+        return result;
     }
 }

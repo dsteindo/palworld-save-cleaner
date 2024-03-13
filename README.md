@@ -3,6 +3,10 @@
 This is a small project where I want to play around and clean pal references in save files that are unassigned.<br>
 Background for these unassigned references is selling/condensing pals and the game not picking up the changes correctly.
 
+## Support
+
+Tested with and supports Palworld steam version 0.1.5.1
+
 ## Requirements
 
 - Python via Windows App Store
@@ -28,6 +32,10 @@ Background for these unassigned references is selling/condensing pals and the ga
 - Provide CLI args for steamId and worldId, added fallback to first folder in %appdata%\..\Local\Pal\Saved\SaveGames
 - Fixed issue where player was removed as well
 - Added functionality to respawn all objects (e.g ore/coal nodes and skill fruit tree fruits), because moving in game day in the past blocked respawning of resources
+- Added multiple world support
+- Logic will export pal parameters to an own file "pal-parameters-export.json"
+- Possibility to override pal parameters if file "pal-parameters-import.json" is present, idea is to export from a previous state and import at a later time if needed, e.g. when changes with Pal Edit need to be reverted
+- Added my own save files as examples for testing purposes
 
 ## Notes
 
