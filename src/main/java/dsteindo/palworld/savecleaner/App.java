@@ -155,13 +155,23 @@ public class App {
     }
 
     private static void resetRespawnTimers(JsonNode worldData) {
+        List<String> worldObjectIds = new ArrayList<>();
+        resetWorldObjects(worldData, worldObjectIds);
         JsonNode entries = worldData.get("MapObjectSpawnerInStageSaveData").get("value");
         int count = 0;
+        int removedInstancesCount = 0;
         for (JsonNode entry : entries) {
-            JsonNode instances = entry.get("value").get("SpawnerDataMapByLevelObjectInstanceId").get("value");
-            for (JsonNode instance : instances) {
+            Iterator<JsonNode> instances = entry.get("value").get("SpawnerDataMapByLevelObjectInstanceId").get("value").iterator();
+            while (instances.hasNext()) {
+                JsonNode instance = instances.next();
+                boolean remove = true;
                 JsonNode items = instance.get("value").get("ItemMap").get("value");
                 for (JsonNode item : items) {
+                    String objectInstanceId = item.get("value").get("MapObjectInstanceId").get("value").asText();
+                    if (!worldObjectIds.contains(objectInstanceId)) {
+                        continue;
+                    }
+                    remove = false;
                     JsonNode lotteryTime = item.get("value").get("NextLotteryGameTime");
                     long time = lotteryTime.get("value").asLong();
                     if (time > 0) {
@@ -169,9 +179,56 @@ public class App {
                         ((ObjectNode) lotteryTime).put("value", 0);
                     }
                 }
+                if (remove) {
+                    instances.remove();
+                    removedInstancesCount++;
+                }
             }
         }
         System.out.println("Reset timer of objects: " + count);
+        System.out.println("Removed timer instances count: " + removedInstancesCount);
+        resetBossTimers(worldData);
+        resetEnemyCamps(worldData);
+        if (worldData.has("DungeonPointMarkerSaveData")) {
+            resetDungeons((ObjectNode) worldData);
+        }
+    }
+
+    private static void resetBossTimers(JsonNode worldData) {
+        ((ObjectNode) worldData).remove("BossSpawnerSaveData");
+        System.out.println("Reset boss timers ...");
+    }
+
+    private static void resetEnemyCamps(JsonNode worldData) {
+        ((ObjectNode) worldData).remove("EnemyCampSaveData");
+        System.out.println("Reset enemy camps ...");
+        ((ObjectNode) worldData).remove("OilrigSaveData");
+        System.out.println("Reset oil rig ...");
+        ((ObjectNode) worldData).remove("FoliageGridSaveDataMap");
+        System.out.println("Reset foliage ...");
+    }
+
+    private static void resetDungeons(ObjectNode worldData) {
+        worldData.remove("DungeonPointMarkerSaveData");
+        worldData.remove("DungeonSaveData");
+        System.out.println("Reset dungeons ...");
+    }
+
+    private static void resetWorldObjects(JsonNode worldData, List<String> worldObjectIds) {
+        Iterator<JsonNode> iterator = worldData.get("MapObjectSaveData").get("value").get("values").iterator();
+        int deleteCount = 0;
+        while(iterator.hasNext()) {
+            JsonNode worldObject = iterator.next();
+            String objectName = worldObject.get("MapObjectId").get("value").asText();
+            if (objectName.startsWith("PickupItem_") || objectName.startsWith("DamagableRock")) {
+                iterator.remove();
+                deleteCount++;
+            }
+            else {
+                worldObjectIds.add(worldObject.get("MapObjectInstanceId").get("value").asText());
+            }
+        }
+        System.out.println("World objects removed: " + deleteCount);
     }
 
     private static void exportPalParameters(Path worldPath, JsonNode worldData) throws Exception {

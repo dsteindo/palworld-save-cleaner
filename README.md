@@ -3,9 +3,15 @@
 This is a small project where I want to play around and clean pal references in save files that are unassigned.<br>
 Background for these unassigned references is selling/condensing pals and the game not picking up the changes correctly.
 
+## Changelog
+
+- 2024.03.12 Started with the project to clean up not used pal references
+- 2024.03.13 Added functionality to reset in-game timers for chests and other respawnables
+- 2024.09.17 Added logic to reset boss timers, enemy camps, oil rig, foliage and dungeons. Removed pickup and destructable rock world objects to compress save game even further and improve loading/saving times. Estimated save compression 1:4
+
 ## Support
 
-Tested with and supports Palworld steam version 0.1.5.1
+Tested with and supports Palworld steam version 0.3.6.x
 
 ## Requirements
 
