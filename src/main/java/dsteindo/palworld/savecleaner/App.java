@@ -13,6 +13,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -156,7 +157,7 @@ public class App {
 
     private static void resetRespawnTimers(JsonNode worldData) {
         List<String> worldObjectIds = new ArrayList<>();
-        resetWorldObjects(worldData, worldObjectIds);
+        // resetWorldObjects(worldData, worldObjectIds);
         JsonNode entries = worldData.get("MapObjectSpawnerInStageSaveData").get("value");
         int count = 0;
         int removedInstancesCount = 0;
@@ -169,7 +170,7 @@ public class App {
                 for (JsonNode item : items) {
                     String objectInstanceId = item.get("value").get("MapObjectInstanceId").get("value").asText();
                     if (!worldObjectIds.contains(objectInstanceId)) {
-                        continue;
+                        // continue;
                     }
                     remove = false;
                     JsonNode lotteryTime = item.get("value").get("NextLotteryGameTime");
@@ -234,6 +235,7 @@ public class App {
     private static void exportPalParameters(Path worldPath, JsonNode worldData) throws Exception {
         File exportFile = worldPath.resolve("pal-parameters-export.json").toFile();
         ObjectMapper mapper = new ObjectMapper();
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.writeValue(exportFile, worldData.get("CharacterSaveParameterMap"));
     }
 

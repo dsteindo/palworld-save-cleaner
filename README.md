@@ -16,7 +16,9 @@ Tested with and supports Palworld steam version 0.3.6.x
 ## Requirements
 
 - Python via Windows App Store
-- Save tools -> https://github.com/cheahjs/palworld-save-tools
+- Save tools
+  - Works with drag on drop https://github.com/cheahjs/palworld-save-tools
+  - Really good alternative to use https://github.com/deafdudecomputers/PalWorldSaveTools
 - Java -> https://sap.github.io/SapMachine/ (add JAVA_HOME and to path)
 - Maven -> https://maven.apache.org/download.cgi (add to path manually)
 - Visual Studio Code (for development, might add CLI in the future) 
@@ -26,7 +28,7 @@ Tested with and supports Palworld steam version 0.3.6.x
 - navigate to the root directory (where pom.xml) is located
 - execute `mvn install`
 - Navigate to %appdata%\..\Local\Pal\Saved\SaveGames and convert Level.sav using palworld save tools
-- - Create a backup of your whole save directory before applying any changes to it 
+  - Create a backup of your whole save directory before applying any changes to it 
 - run App.java via VS Code (might add CLI later)
 - convert the newly created "Level.sav.modified.json" back with save tools and override Level.sav
 - You can check if changes were applied successfully with Pal Edit https://github.com/EternalWraith/PalEdit
