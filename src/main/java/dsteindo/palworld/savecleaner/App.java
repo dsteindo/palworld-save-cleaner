@@ -157,7 +157,7 @@ public class App {
 
     private static void resetRespawnTimers(JsonNode worldData) {
         List<String> worldObjectIds = new ArrayList<>();
-        // resetWorldObjects(worldData, worldObjectIds);
+        resetWorldObjects(worldData, worldObjectIds);
         JsonNode entries = worldData.get("MapObjectSpawnerInStageSaveData").get("value");
         int count = 0;
         int removedInstancesCount = 0;
@@ -170,7 +170,7 @@ public class App {
                 for (JsonNode item : items) {
                     String objectInstanceId = item.get("value").get("MapObjectInstanceId").get("value").asText();
                     if (!worldObjectIds.contains(objectInstanceId)) {
-                        // continue;
+                        continue;
                     }
                     remove = false;
                     JsonNode lotteryTime = item.get("value").get("NextLotteryGameTime");
@@ -221,12 +221,12 @@ public class App {
         while(iterator.hasNext()) {
             JsonNode worldObject = iterator.next();
             String objectName = worldObject.get("MapObjectId").get("value").asText();
-            if (objectName.startsWith("PickupItem_") || objectName.startsWith("DamagableRock")) {
+            if (objectName.startsWith("PickupItem_") || objectName.startsWith("DamagableRock") || objectName.startsWith("TreasureBox") || objectName.startsWith("CommonDropItem3D")) {
                 iterator.remove();
                 deleteCount++;
             }
             else {
-                worldObjectIds.add(worldObject.get("MapObjectInstanceId").get("value").asText());
+                // worldObjectIds.add(worldObject.get("MapObjectInstanceId").get("value").asText());
             }
         }
         System.out.println("World objects removed: " + deleteCount);
