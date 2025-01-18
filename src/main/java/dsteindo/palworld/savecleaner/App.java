@@ -1,6 +1,7 @@
 package dsteindo.palworld.savecleaner;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -19,9 +20,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class App {
     public static void main(String[] args) throws Exception {
+        // String saves = "D:\\Palworld";
+        // removeNestedBackupFolders(Paths.get(saves).toFile());
+
         String basePath = System.getenv("APPDATA") + "\\..\\Local\\Pal\\Saved\\SaveGames";
         String steamId = getSteamId(args, basePath);
         List<String> worldIds = getWorldIds(args, basePath + '\\' + steamId);
+
+        // Runtime.getRuntime().exec("cmd /C start /wait C:\\PalWorldSaveTools.v1.0.0_feybreak\\convert_sav_to_json.cmd");
+        // Thread.sleep(7000);
 
         for (String worldId : worldIds) {
             Path worlPath = Paths.get(basePath, steamId, worldId);
@@ -54,11 +61,20 @@ public class App {
 
         resetRespawnTimers(worldData);
 
-        exportPalParameters(worldPath, worldData);
+        // exportPalParameters(worldPath, worldData);
         importPalParameters(worldPath, worldData);
 
         Path outputPath = worldPath.resolve("Level.sav.modified.json");
+        // Path outputPath = worldPath.resolve("Level.sav.json");
         mapper.writeValue(outputPath.toFile(), obj);
+
+        // Path savFile = worldPath.resolve("Level.sav");
+        // savFile.toFile().delete();
+        
+        // Runtime.getRuntime().exec("cmd /C start /wait C:\\PalworldSaveTools.v0.8.0\\convert_json_to_sav.cmd");
+        // Thread.sleep(4000);
+
+        // if (savFile.toFile().exists()) { outputPath.toFile().delete(); }
     }
 
     private static List<String> getPalInstanceIds(JsonNode worldData) {
@@ -267,5 +283,35 @@ public class App {
             result.put(instanceId, parameter);
         }
         return result;
+    }
+    
+    static void removeNestedBackupFolders(File directory) {
+        if (directory.isDirectory()) {
+            if ("backup".equals(directory.getName())) {
+                String parentDir = directory.getParentFile().getName();
+                if (parentDir.length() == 32) {
+                    System.out.println(directory.getAbsolutePath());
+                    deleteDir(directory);
+                }
+            }
+            else {
+                File[] contents = directory.listFiles();
+                for (File file : contents) {
+                    removeNestedBackupFolders(file);
+                }
+            }
+        }
+    }
+
+    private static void deleteDir(File file) {
+        if (file.isDirectory()) {
+            File[] contents = file.listFiles();
+            for (File f : contents) {
+                if (!Files.isSymbolicLink(f.toPath())) {
+                    deleteDir(f);
+                }
+            }
+        }
+        file.delete();
     }
 }
