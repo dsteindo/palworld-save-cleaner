@@ -27,9 +27,6 @@ public class App {
         String steamId = getSteamId(args, basePath);
         List<String> worldIds = getWorldIds(args, basePath + '\\' + steamId);
 
-        // Runtime.getRuntime().exec("cmd /C start /wait C:\\PalWorldSaveTools.v1.0.0_feybreak\\convert_sav_to_json.cmd");
-        // Thread.sleep(7000);
-
         for (String worldId : worldIds) {
             Path worlPath = Paths.get(basePath, steamId, worldId);
             handleInternal(worlPath);
@@ -61,6 +58,10 @@ public class App {
 
         resetRespawnTimers(worldData);
 
+        List<String> localIds = cleanItemContainerSaveData(worldData);
+
+        cleanDynamicItemSaveData(worldData, localIds);
+
         // exportPalParameters(worldPath, worldData);
         importPalParameters(worldPath, worldData);
 
@@ -70,11 +71,6 @@ public class App {
 
         // Path savFile = worldPath.resolve("Level.sav");
         // savFile.toFile().delete();
-        
-        // Runtime.getRuntime().exec("cmd /C start /wait C:\\PalworldSaveTools.v0.8.0\\convert_json_to_sav.cmd");
-        // Thread.sleep(4000);
-
-        // if (savFile.toFile().exists()) { outputPath.toFile().delete(); }
     }
 
     private static List<String> getPalInstanceIds(JsonNode worldData) {
@@ -237,7 +233,7 @@ public class App {
         while(iterator.hasNext()) {
             JsonNode worldObject = iterator.next();
             String objectName = worldObject.get("MapObjectId").get("value").asText();
-            if (objectName.startsWith("PickupItem_") || objectName.startsWith("DamagableRock") || objectName.startsWith("TreasureBox") || objectName.startsWith("CommonDropItem3D")) {
+            if (objectName.startsWith("PickupItem_") || objectName.startsWith("DamagableRock") || objectName.startsWith("TreasureBox") || objectName.startsWith("CommonDropItem3D") || objectName.startsWith("PalEgg") || objectName.startsWith("Palegg")) {
                 iterator.remove();
                 deleteCount++;
             }
@@ -246,6 +242,55 @@ public class App {
             }
         }
         System.out.println("World objects removed: " + deleteCount);
+    }
+
+    private static List<String> cleanItemContainerSaveData(JsonNode worldData) {
+        Iterator<JsonNode> iterator = worldData.get("ItemContainerSaveData").get("value").iterator();
+        int deleteCount = 0;
+        List<String> localIds = new ArrayList<>();
+        while (iterator.hasNext()) {
+            JsonNode containerData = iterator.next().get("value");
+            Iterator<JsonNode> slotsValues = containerData.get("Slots").get("value").get("values").iterator();
+            if (slotsValues.hasNext()) {
+                JsonNode rawData = slotsValues.next().get("RawData").get("value");
+                String staticId = rawData.get("item").get("static_id").asText();
+                if (staticId.startsWith("PalEgg") && isSaveToRemoveFromWorldContainer(containerData)) {
+                    String localId = rawData.get("item").get("dynamic_id").get("local_id_in_created_world").asText();
+                    System.out.println(localId);
+                    iterator.remove();
+                    deleteCount++;
+                    localIds.add(localId);
+                }
+            }
+        }
+        System.out.println("Item container save data removed: " + deleteCount);
+        return localIds;
+    }
+
+    private static boolean isSaveToRemoveFromWorldContainer(JsonNode containerData) {
+        // possible fix for eggs being removed from player containers ...
+        int slotNum = containerData.get("SlotNum").get("value").asInt();
+        if (slotNum == 1) {
+            // fix for egg incubators
+            Iterator<JsonNode> typeAIterator = containerData.get("RawData").get("value").get("permission").get("type_a").iterator();
+            return !typeAIterator.hasNext();
+        }
+        return false;
+    }
+
+    private static void cleanDynamicItemSaveData(JsonNode worldData, List<String> localIds) {
+        Iterator<JsonNode> iterator = worldData.get("DynamicItemSaveData").get("value").get("values").iterator();
+        int deleteCount = 0;
+        while (iterator.hasNext()) {
+            JsonNode id = iterator.next().get("RawData").get("value").get("id");
+            String staticId = id.get("static_id").asText();
+            if (staticId.startsWith("PalEgg") && localIds.contains(id.get("local_id_in_created_world").asText())) {
+                iterator.remove();
+                deleteCount++;
+            }
+        }
+        System.out.println("Dynamic item save data removed: " + deleteCount);
+
     }
 
     private static void exportPalParameters(Path worldPath, JsonNode worldData) throws Exception {
