@@ -34,6 +34,14 @@ Tested with and supports Palworld steam version 0.3.6.x
 - You can check if changes were applied successfully with Pal Edit https://github.com/EternalWraith/PalEdit
 - Start the game and check if everything is working and your base pals still exist
 
+## Troubleshooting
+
+### In case VS code doesn't resolve imports
+
+- Make sure lib folder exists with jackson dependencies installed
+- Press CTRL + SHIFT + P
+- Execute "Java: Clean Java Language Server Workspace"
+
 ## Changelog
 
 - Initial commit
